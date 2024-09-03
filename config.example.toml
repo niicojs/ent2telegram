@@ -1,0 +1,8 @@
+[login]
+ent_url = "https://www.moncollege-ent.essonne.fr/timeline/timeline"
+user =  "ent login"
+password = "ent password"
+
+[telegram]
+token="token to get from @fatherbot"
+chatId=1111 # id of user or group
