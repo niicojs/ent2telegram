@@ -35,16 +35,30 @@ try {
   }
 
   const telegram = Telegram(config);
-  const ent = Ent(config);
+  const ent = Ent(config, history);
 
   console.log('Login...');
   const info = await ent.login();
   console.log('Logged in as ' + info.username);
 
-  let notifs = await ent.notifications();
-  console.log(notifs);
-  notifs = notifs.filter((p) => !history.find((h) => h.id === p.id));
+  console.log('Get inbox...');
+  const messages = await ent.inbox();
+  console.log(`  -> ${messages.length} messages to send`);
+  for (const msg of messages) {
+    try {
+      await telegram.sendMessage(msg);
+      history.push({ id: msg.id, date: msg.date });
+    } catch (e) {
+      console.log('Error');
+      const error = await e.response.json();
+      console.log(error || e.message);
+      console.log(e);
+    }
+  }
 
+  console.log('Get notifications...');
+  const notifs = await ent.notifications();
+  console.log(`  -> ${notifs.length} messages to send`);
   for (const notif of notifs) {
     try {
       await telegram.sendMessage(notif);

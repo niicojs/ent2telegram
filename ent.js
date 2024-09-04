@@ -3,7 +3,10 @@ import { createFetch } from 'ofetch';
 import makeFetchCookie from 'fetch-cookie';
 import sanitizeHtml from 'sanitize-html';
 
-export default function Ent(config) {
+const clean = (html) =>
+  sanitizeHtml(html, { allowedTags: ['b', 'i', 'u', 's', 'a'] });
+
+export default function Ent(config, history) {
   const fetchWithCookies = makeFetchCookie(fetch);
   const ofetch = createFetch({
     fetch: fetchWithCookies,
@@ -41,19 +44,40 @@ export default function Ent(config) {
   };
 
   const inbox = async () => {
-    const messages = await client('/conversation/list/inbox?page=0&unread=false');
-    console.log(messages);
+    // get inbox
+    const data = await client('/conversation/list/inbox?page=0&unread=false');
+
+    let messages = data.map((m) => ({
+      id: m.id,
+      type: 'Message',
+      child,
+      date: new Date(m.date),
+      from: m.displayNames.find((d) => d[0] === m.from)[1],
+      subject: m.subject,
+      html: '',
+      hasAttachment: m.hasAttachment,
+    }));
+
+    // filter already read
+    messages = messages.filter((p) => !history.find((h) => h.id === p.id));
+
+    // get details for unread
+    if (messages.length > 0) {
+      for (const msg of messages) {
+        const detail = await client(`/conversation/message/${msg.id}`);
+        msg.html = clean(detail.body);
+      }
+    }
+
+    return messages;
   };
 
   const notifications = async () => {
-    const notifs = await client(
-      '/timeline/lastNotifications?type=ARCHIVE&type=BLOG&type=CALENDAR&type=COLLABORATIVEEDITOR&type=COLLABORATIVEWALL&type=COMMUNITY&type=EXERCIZER&type=FORMULAIRE&type=FORUM&type=HOMEWORKS&type=MESSAGERIE&type=MINDMAP&type=NEWS&type=PAGES&type=POLL&type=PRESENCES&type=RACK&type=RBS&type=SCHOOLBOOK&type=SCRAPBOOK&type=SHAREBIGFILES&type=SUPPORT&type=TIMELINE&type=TIMELINEGENERATOR&type=USERBOOK&type=USERBOOK_MOOD&type=USERBOOK_MOTTO&type=WIKI&type=WORKSPACE&page=0'
+    const data = await client(
+      '/timeline/lastNotifications?type=ARCHIVE&type=BLOG&type=CALENDAR&type=COLLABORATIVEEDITOR&type=COLLABORATIVEWALL&type=COMMUNITY&type=EXERCIZER&type=FORMULAIRE&type=FORUM&type=HOMEWORKS&type=MINDMAP&type=NEWS&type=PAGES&type=POLL&type=PRESENCES&type=RACK&type=RBS&type=SCHOOLBOOK&type=SCRAPBOOK&type=SHAREBIGFILES&type=SUPPORT&type=TIMELINE&type=TIMELINEGENERATOR&type=USERBOOK&type=USERBOOK_MOOD&type=USERBOOK_MOTTO&type=WIKI&type=WORKSPACE&page=0'
     );
 
-    const clean = (html) =>
-      sanitizeHtml(html, { allowedTags: ['b', 'i', 'u', 's', 'a'] });
-
-    return notifs.results.map((p) => ({
+    const notifs = data.results.map((p) => ({
       id: p._id,
       type: p.type,
       child,
@@ -62,6 +86,10 @@ export default function Ent(config) {
       subject: clean(p.params.subject || p.params.resourceName),
       html: clean(p.message).replace(/(\r?\n)+/g, '\n'),
     }));
+
+    notifs = notifs.filter((p) => !history.find((h) => h.id === p.id));
+
+    return notifs;
   };
 
   return { login, inbox, notifications };
