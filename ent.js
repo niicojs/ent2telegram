@@ -41,8 +41,8 @@ export default function Ent(config) {
   };
 
   const inbox = async () => {
-    const unread = await client('/conversation/count/INBOX?unread=true');
-    console.log(unread);
+    const messages = await client('/conversation/list/inbox?page=0&unread=false');
+    console.log(messages);
   };
 
   const notifications = async () => {
@@ -58,11 +58,11 @@ export default function Ent(config) {
       type: p.type,
       child,
       date: new Date(p.date.$date),
-      from: clean(p.params.usernam),
+      from: clean(p.params.username),
       subject: clean(p.params.subject || p.params.resourceName),
       html: clean(p.message).replace(/(\r?\n)+/g, '\n'),
     }));
   };
 
-  https: return { login, inbox, notifications };
+  return { login, inbox, notifications };
 }
