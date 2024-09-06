@@ -47,6 +47,15 @@ export default function Ent(config, history) {
     return info;
   };
 
+  const guessType = (info) => {
+    if (info.contentType.startsWith('image')) {
+      return 'photo';
+    } else if (info.contentType.startsWith('video')) {
+      return 'video';
+    }
+    return 'document';
+  };
+
   const inbox = async () => {
     // get inbox
     const data = await client('/conversation/list/inbox?page=0&unread=false');
@@ -59,7 +68,7 @@ export default function Ent(config, history) {
       from: m.displayNames.find((d) => d[0] === m.from)[1],
       subject: m.subject,
       html: '',
-      hasAttachment: m.hasAttachment,
+      attachments: [],
     }));
 
     // filter already read
@@ -70,6 +79,16 @@ export default function Ent(config, history) {
       for (const msg of messages) {
         const detail = await client(`/conversation/message/${msg.id}`);
         msg.html = clean(detail.body);
+        msg.attachments = await Promise.all(
+          detail.attachments.map(async (a) => ({
+            id: a.id,
+            name: a.filename,
+            type: guessType(a),
+            data: await client(
+              `/conversation/message/${msg.id}/attachment/${a.id}`
+            ),
+          }))
+        );
       }
     }
 

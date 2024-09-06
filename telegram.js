@@ -68,7 +68,7 @@ export default function Telegram(config) {
       const form = new FormData();
       form.append('chat_id', chatId);
       form.append('disable_notification', true);
-      form.append(type, new Blob([file.data]), file.name);
+      form.append(type, file.data, file.name);
       await client.post(api[type], { body: form });
     } else {
       for (const elts of chunk(files, 10)) {
@@ -81,7 +81,7 @@ export default function Telegram(config) {
             type: type,
             media: `attach://${file.name}`,
           });
-          form.append(file.name, new Blob([file.data]), file.name);
+          form.append(file.name, file.data, file.name);
         }
         form.append('media', JSON.stringify(media));
         await client.post('sendMediaGroup', { body: form });
