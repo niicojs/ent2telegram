@@ -98,7 +98,7 @@ export default function Ent(config, history) {
 
   const notifications = async () => {
     const data = await client(
-      '/timeline/lastNotifications?type=ARCHIVE&type=BLOG&type=CALENDAR&type=COLLABORATIVEEDITOR&type=COLLABORATIVEWALL&type=COMMUNITY&type=EXERCIZER&type=FORMULAIRE&type=FORUM&type=HOMEWORKS&type=MINDMAP&type=NEWS&type=PAGES&type=POLL&type=PRESENCES&type=RACK&type=RBS&type=SCHOOLBOOK&type=SCRAPBOOK&type=SHAREBIGFILES&type=SUPPORT&type=TIMELINE&type=TIMELINEGENERATOR&type=USERBOOK&type=USERBOOK_MOOD&type=USERBOOK_MOTTO&type=WIKI&type=WORKSPACE&page=0'
+      '/timeline/lastNotifications?type=ARCHIVE&type=BLOG&type=CALENDAR&type=COLLABORATIVEEDITOR&type=COLLABORATIVEWALL&type=COMMUNITY&type=EXERCIZER&type=FORMULAIRE&type=FORUM&type=HOMEWORKS&type=MINDMAP&type=NEWS&type=PAGES&type=POLL&type=PRESENCES&type=RACK&type=RBS&type=SCHOOLBOOK&type=SCRAPBOOK&type=SHAREBIGFILES&type=SUPPORT&type=TIMELINE&type=TIMELINEGENERATOR&type=USERBOOK&type=USERBOOK_MOTTO&type=WIKI&type=WORKSPACE&page=0'
     );
 
     let notifs = data.results.map((p) => ({
