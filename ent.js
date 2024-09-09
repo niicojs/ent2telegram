@@ -5,10 +5,11 @@ import sanitizeHtml from 'sanitize-html';
 
 const clean = (html) =>
   sanitizeHtml(html, {
-    allowedTags: ['b', 'i', 'u', 's', 'a', 'div'],
+    allowedTags: ['b', 'i', 'u', 's', 'a', 'div', 'br'],
   })
-    .replace(/(\<br \/\>)|(\<\/div\>)/g, '\n')
-    .replace(/<div>/g, '');
+    .replace(/(\<br ?\/?\>)|(\<div\>)/g, '\n')
+    .replace(/(\<\/div\>)/g, '')
+    .replace(/(\n)+/g, '\n');
 
 export default function Ent(config, history) {
   const fetchWithCookies = makeFetchCookie(fetch);
