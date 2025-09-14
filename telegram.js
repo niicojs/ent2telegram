@@ -1,4 +1,3 @@
-import { Blob } from 'buffer';
 import { FormData } from 'formdata-node';
 import ky from 'ky';
 import { format } from 'date-fns';

@@ -5,10 +5,10 @@ import sanitizeHtml from 'sanitize-html';
 
 const clean = (html) =>
   sanitizeHtml(html, {
-    allowedTags: ['b', 'i', 'u', 's', 'a', 'div', 'br'],
+    allowedTags: ['b', 'i', 'u', 's', 'a', 'div', 'p', 'br'],
   })
-    .replace(/(\<br ?\/?\>)|(\<div\>)/g, '\n')
-    .replace(/(\<\/div\>)/g, '')
+    .replace(/(\<br ?\/?\>)|(\<div\>)|(\<p\>)/g, '\n')
+    .replace(/(\<\/div\>)|(\<\/p\>)/g, '')
     .replace(/(\n)+/g, '\n');
 
 export default function Ent(config, history) {
