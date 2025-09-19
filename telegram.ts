@@ -1,19 +1,36 @@
-import { FormData } from 'formdata-node';
-import ky from 'ky';
 import { format } from 'date-fns';
+import { ofetch } from 'ofetch';
+import type { Config } from './config.ts';
+import { wait } from './utils.ts';
 
-function chunk(items, size) {
-  const chunks = [];
-  items = [].concat(...items);
+function chunk<T>(items: T[], size: number) {
+  const chunks: T[][] = [];
 
-  while (items.length) {
-    chunks.push(items.splice(0, size));
+  const temps = items.slice(0);
+  while (temps.length) {
+    chunks.push(temps.splice(0, size));
   }
 
   return chunks;
 }
 
-export default function Telegram(config) {
+export const escape = (text: string) => {
+  if (!text) return '\\.';
+  return text.replace(/(\_|\*|\[|\]|\(|\)|\~|\`|\>|\#|\+|\-|\=|\||\{|\}|\.|\!)/g, '\\$1');
+};
+
+export type Attach = { id: string, name: string; type: string; data: Blob };
+export type Post = {
+  child: string;
+  type: string;
+  from?: string;
+  date: Date;
+  subject: string;
+  html: string;
+  attachments?: Attach[];
+};
+
+export default function Telegram(config: Config) {
   const token = config.telegram.token;
   const chatId = config.telegram.chatId;
   const throttling = config.telegram?.throttling || 0;
@@ -25,35 +42,24 @@ export default function Telegram(config) {
     }
     last = new Date().getTime();
   };
-  const wait = async (time) => {
-    return new Promise((resolve) => setTimeout(resolve, time));
-  };
 
-  const client = ky.create({
-    prefixUrl: `https://api.telegram.org/bot${token}`,
-    retry: {
-      limit: 2,
-      methods: ['get', 'post'],
-      statusCodes: [429],
-      delay: (attemptCount) => {
-        if (attemptCount === 2) {
-          return 61_000;
-        } else {
-          return 2 ** (attemptCount - 1) * 1_000;
-        }
-      },
+  const client = ofetch.create({
+    method: 'POST',
+    baseURL: `https://api.telegram.org/bot${token}`,
+    retry: 5,
+    retryDelay: (ctx) => {
+      const opt = ctx.options as any;
+      const attempt = (opt.retryAttempt = (opt.retryAttempt || 0) + 1);
+      if (attempt < 2) {
+        return 2 ** (attempt - 1) * 1_000;
+      } else {
+        return 61_000;
+      }
     },
+    retryStatusCodes: [408, 429, 503, 504],
   });
 
-  const escape = (text) => {
-    if (!text) return '\\.';
-    return text.replace(
-      /(\_|\*|\[|\]|\(|\)|\~|\`|\>|\#|\+|\-|\=|\||\{|\}|\.|\!)/g,
-      '\\$1'
-    );
-  };
-
-  const sendAttachments = async (files, type) => {
+  const sendAttachments = async (files: Attach[], type: string) => {
     console.log(`Send ${files.length} attachments...`);
     if (files.length === 1) {
       await throttle();
@@ -62,13 +68,13 @@ export default function Telegram(config) {
         document: 'sendDocument',
         video: 'sendVideo',
         audio: 'sendAudio',
-      };
+      } as Record<string, string>;
       const file = files[0];
       const form = new FormData();
       form.append('chat_id', chatId);
-      form.append('disable_notification', true);
+      form.append('disable_notification', 'true');
       form.append(type, file.data, file.name);
-      await client.post(api[type], { body: form });
+      await client(api[type], { body: form });
     } else {
       for (const elts of chunk(files, 10)) {
         await throttle();
@@ -83,7 +89,7 @@ export default function Telegram(config) {
           form.append(file.name, file.data, file.name);
         }
         form.append('media', JSON.stringify(media));
-        await client.post('sendMediaGroup', { body: form });
+        await client('sendMediaGroup', { body: form });
         if (elts.length >= 10) {
           await wait(1 * 60 * 1_000 + 100); // wait a minute to avoid throttling
         }
@@ -91,11 +97,11 @@ export default function Telegram(config) {
     }
   };
 
-  const sendMessage = async (post) => {
+  const sendMessage = async (post: Post) => {
     await throttle();
 
-    await client.post('sendMessage', {
-      json: {
+    await client('sendMessage', {
+      body: {
         chat_id: chatId,
         parse_mode: 'HTML',
         text: `
@@ -132,13 +138,13 @@ ${post.html}`,
       );
       if (others.length > 0) {
         await throttle();
-        await client.post('sendMessage', {
-          json: {
+        await client('sendMessage', {
+          body: {
             chat_id: config.telegram.chatId,
             parse_mode: 'MarkdownV2',
-            text: `${others.length} objet${
-              others.length > 1 ? 's' : ''
-            } de type ${others.map((o) => o.type).join(',')}`,
+            text: `${others.length} objet${others.length > 1 ? 's' : ''} de type ${others
+              .map((o) => o.type)
+              .join(',')}`,
           },
         });
       }

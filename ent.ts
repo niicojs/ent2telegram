@@ -2,8 +2,10 @@ import { ProxyAgent } from 'undici';
 import { createFetch } from 'ofetch';
 import makeFetchCookie from 'fetch-cookie';
 import sanitizeHtml from 'sanitize-html';
+import type { Config } from './config.ts';
+import type { Attach } from './telegram.ts';
 
-const clean = (html) =>
+const clean = (html: string) =>
   sanitizeHtml(html, {
     allowedTags: ['b', 'i', 'u', 's', 'a', 'div', 'p', 'br'],
   })
@@ -11,7 +13,7 @@ const clean = (html) =>
     .replace(/(\<\/div\>)|(\<\/p\>)/g, '')
     .replace(/(\n)+/g, '\n');
 
-export default function Ent(config, history) {
+export default function Ent(config: Config, history: { id: string; date: Date }[]) {
   const fetchWithCookies = makeFetchCookie(fetch);
   const ofetch = createFetch({
     fetch: fetchWithCookies,
@@ -48,7 +50,7 @@ export default function Ent(config, history) {
     return info;
   };
 
-  const guessType = (info) => {
+  const guessType = (info: { contentType: string }) => {
     if (info.contentType.startsWith('image')) {
       return 'photo';
     } else if (info.contentType.startsWith('video')) {
@@ -59,35 +61,33 @@ export default function Ent(config, history) {
 
   const inbox = async () => {
     // get inbox
-    const data = await client('/conversation/list/inbox?page=0&unread=false');
+    const data: any[] = await client('/conversation/list/inbox?page=0&unread=false');
 
     let messages = data.map((m) => ({
-      id: m.id,
+      id: m.id as string,
       type: 'Message',
-      child,
+      child: child as string,
       date: new Date(m.date),
-      from: m.displayNames.find((d) => d[0] === m.from)[1],
-      subject: m.subject,
+      from: m.displayNames.find((d: any) => d[0] === m.from)[1],
+      subject: m.subject as string,
       html: '',
-      attachments: [],
+      attachments: [] as Attach[],
     }));
 
     // filter already read
-    messages = messages.filter((p) => !history.find((h) => h.id === p.id));
+    messages = messages.filter((p: any) => !history.find((h) => h.id === p.id));
 
     // get details for unread
     if (messages.length > 0) {
       for (const msg of messages) {
         const detail = await client(`/conversation/message/${msg.id}`);
-        msg.html = clean(detail.body);
+        msg.html = clean(detail.body as string);
         msg.attachments = await Promise.all(
-          detail.attachments.map(async (a) => ({
+          detail.attachments.map(async (a: any) => ({
             id: a.id,
             name: a.filename,
             type: guessType(a),
-            data: await client(
-              `/conversation/message/${msg.id}/attachment/${a.id}`
-            ),
+            data: await client(`/conversation/message/${msg.id}/attachment/${a.id}`),
           }))
         );
       }
@@ -101,7 +101,7 @@ export default function Ent(config, history) {
       '/timeline/lastNotifications?type=ARCHIVE&type=BLOG&type=CALENDAR&type=COLLABORATIVEEDITOR&type=COLLABORATIVEWALL&type=COMMUNITY&type=EXERCIZER&type=FORMULAIRE&type=FORUM&type=HOMEWORKS&type=MINDMAP&type=NEWS&type=PAGES&type=POLL&type=PRESENCES&type=RACK&type=RBS&type=SCHOOLBOOK&type=SCRAPBOOK&type=SHAREBIGFILES&type=SUPPORT&type=TIMELINE&type=TIMELINEGENERATOR&type=USERBOOK&type=USERBOOK_MOTTO&type=WIKI&type=WORKSPACE&page=0'
     );
 
-    let notifs = data.results.map((p) => ({
+    let notifs = (data.results as any[]).map((p) => ({
       id: p._id,
       type: p.type,
       child,

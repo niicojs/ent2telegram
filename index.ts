@@ -1,12 +1,11 @@
-// ts-check
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 import path from 'node:path';
 
-import getConfig from './config.js';
-import { initLockFile } from './utils.js';
-import Telegram from './telegram.js';
-import Ent from './ent.js';
+import getConfig from './config.ts';
+import { initLockFile } from './utils.ts';
+import Telegram from './telegram.ts';
+import Ent from './ent.ts';
 
 const { values: options } = parseArgs({
   options: {
@@ -24,11 +23,11 @@ const config = getConfig(home);
 
 const lockFile = initLockFile(config);
 try {
-  const history = [];
+  const history: { id: string; date: Date }[] = [];
   if (existsSync(historyFile)) {
     history.push(
-      ...JSON.parse(readFileSync(historyFile, 'utf8')).map((h) => ({
-        ...h,
+      ...JSON.parse(readFileSync(historyFile, 'utf8')).map((h: any) => ({
+        id: h.id,
         date: new Date(h.date),
       }))
     );
@@ -48,7 +47,7 @@ try {
     try {
       await telegram.sendMessage(msg);
       history.push({ id: msg.id, date: msg.date });
-    } catch (e) {
+    } catch (e: any) {
       console.log('Error');
       const error = await e.response.json();
       console.log(error || e.message);
@@ -63,7 +62,7 @@ try {
     try {
       await telegram.sendMessage(notif);
       history.push({ id: notif.id, date: notif.date });
-    } catch (e) {
+    } catch (e: any) {
       console.log('Error');
       const error = await e.response.json();
       console.log(error || e.message);
@@ -81,6 +80,6 @@ try {
   console.log('Done.');
 } finally {
   try {
-    rmSync(lockFile);
+    if (lockFile) rmSync(lockFile);
   } catch {}
 }

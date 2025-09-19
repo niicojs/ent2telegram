@@ -2,18 +2,25 @@
   "name": "ent2telegram",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "index.ts",
   "scripts": {},
   "type": "module",
+  "prettier": {
+    "singleQuote": true,
+    "printWidth": 100
+  },
+  "pnpm": {},
   "dependencies": {
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.2",
     "fetch-cookie": "^3.1.0",
-    "formdata-node": "^6.0.3",
-    "ky": "^1.10.0",
     "ofetch": "^1.4.1",
     "sanitize-html": "^2.17.0",
-    "toml": "^3.0.0",
+    "smol-toml": "^1.4.2",
     "undici": "^7.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "@types/sanitize-html": "^2.16.0"
   }
 }
