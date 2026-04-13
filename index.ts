@@ -55,20 +55,20 @@ try {
       }
     }
 
-    // console.log('Get notifications...');
-    // const notifs = await ent.notifications();
-    // console.log(`  -> ${notifs.length} messages to send`);
-    // for (const notif of notifs) {
-    //   try {
-    //     await telegram.sendMessage(notif);
-    //     history.push({ id: notif.id, date: notif.date });
-    //   } catch (e: any) {
-    //     console.log('Error');
-    //     const error = await e.response.json();
-    //     console.log(error || e.message);
-    //     console.log(e);
-    //   }
-    // }
+    console.log('Get notifications...');
+    const notifs = await ent.notifications();
+    console.log(`  -> ${notifs.length} messages to send`);
+    for (const notif of notifs) {
+      try {
+        await telegram.sendMessage(notif);
+        history.push({ id: notif.id, date: notif.date });
+      } catch (e: any) {
+        console.log('Error');
+        const error = await e.response.json();
+        console.log(error || e.message);
+        console.log(e);
+      }
+    }
 
     console.log('Save history...');
     let synchistory = history;

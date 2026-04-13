@@ -118,7 +118,7 @@ export default function Ent(config: Config, history: { id: string; date: Date }[
 
   const notifications = async () => {
     const path =
-      'timeline/lastNotifications?type=APPOINTMENTS&type=ARCHIVE&type=BLOG&type=CALENDAR&type=COLLABORATIVEEDITOR&type=COLLABORATIVEWALL&type=COMMUNITIES&type=COMMUNITY&type=EXERCIZER&type=FORMULAIRE&type=FORUM&type=HOMEWORKS&type=MAGNETO&type=MESSAGERIE&type=MINDMAP&type=NABOOK&type=PAGES&type=POLL&type=RACK&type=RBS&type=SCHOOLBOOK&type=SCRAPBOOK&type=SHAREBIGFILES&type=SUPPORT&type=TIMELINE&type=TIMELINEGENERATOR&type=USERBOOK&type=USERBOOK_MOOD&type=USERBOOK_MOTTO&type=WIKI&type=WORKSPACE&type=NEWS&page=0';
+      'timeline/lastNotifications?type=APPOINTMENTS&type=ARCHIVE&type=BLOG&type=CALENDAR&type=COLLABORATIVEEDITOR&type=COLLABORATIVEWALL&type=COMMUNITIES&type=COMMUNITY&type=EXERCIZER&type=FORMULAIRE&type=FORUM&type=HOMEWORKS&type=MAGNETO&type=MINDMAP&type=NABOOK&type=PAGES&type=POLL&type=RACK&type=RBS&type=SCHOOLBOOK&type=SCRAPBOOK&type=SHAREBIGFILES&type=SUPPORT&type=TIMELINE&type=TIMELINEGENERATOR&type=USERBOOK&type=USERBOOK_MOOD&type=USERBOOK_MOTTO&type=WIKI&type=WORKSPACE&type=NEWS&page=0';
     const data = await http_get_json(path);
 
     let notifs = (data.results as any[]).map((p) => ({
@@ -140,6 +140,7 @@ export default function Ent(config: Config, history: { id: string; date: Date }[
     try {
       if (page) await page.close();
       if (page?.context()) await page.context().close();
+      if (page?.context()?.browser()) await page.context()?.browser()?.close();
     } catch (e) {
       console.error('Error during cleanup:', e);
     }
