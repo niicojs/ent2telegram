@@ -16,10 +16,10 @@ function chunk<T>(items: T[], size: number) {
 
 export const escape = (text: string) => {
   if (!text) return '\\.';
-  return text.replace(/(\_|\*|\[|\]|\(|\)|\~|\`|\>|\#|\+|\-|\=|\||\{|\}|\.|\!)/g, '\\$1');
+  return text.replace(/(_|\*|\[|\]|\(|\)|~|`|>|#|\+|-|=|\||\{|\}|\.|!)/g, '\\$1');
 };
 
-export type Attach = { id: string, name: string; type: string; data: Blob };
+export type Attach = { id: string; name: string; type: string; data: Blob };
 export type Post = {
   child: string;
   type: string;
@@ -73,7 +73,9 @@ export default function Telegram(config: Config) {
       const form = new FormData();
       form.append('chat_id', chatId);
       form.append('disable_notification', 'true');
-      form.append(type, file.data, file.name);
+      let blob = file.data;
+      if (blob instanceof Buffer) blob = new Blob([blob]);
+      form.append(type, blob, file.name);
       await client(api[type], { body: form });
     } else {
       for (const elts of chunk(files, 10)) {
@@ -86,7 +88,9 @@ export default function Telegram(config: Config) {
             type: type,
             media: `attach://${file.name}`,
           });
-          form.append(file.name, file.data, file.name);
+          let blob = file.data;
+          if (blob instanceof Buffer) blob = new Blob([blob]);
+          form.append(file.name, blob, file.name);
         }
         form.append('media', JSON.stringify(media));
         await client('sendMediaGroup', { body: form });
@@ -133,9 +137,7 @@ ${post.html}`,
       }
 
       // notif pour les autres objets (audio ?)
-      const others = post.attachments.filter(
-        (a) => !['image', 'document', 'video'].includes(a.type)
-      );
+      const others = post.attachments.filter((a) => !['image', 'document', 'video'].includes(a.type));
       if (others.length > 0) {
         await throttle();
         await client('sendMessage', {

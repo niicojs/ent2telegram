@@ -2,25 +2,46 @@
   "name": "ent2telegram",
   "version": "1.0.0",
   "description": "",
+  "type": "module",
   "main": "index.ts",
   "scripts": {},
-  "type": "module",
-  "prettier": {
-    "singleQuote": true,
-    "printWidth": 100
-  },
-  "pnpm": {},
   "dependencies": {
     "date-fns": "^4.1.0",
-    "dotenv": "^17.2.2",
-    "fetch-cookie": "^3.1.0",
-    "ofetch": "^1.4.1",
-    "sanitize-html": "^2.17.0",
-    "smol-toml": "^1.4.2",
-    "undici": "^7.16.0"
+    "dotenv": "^17.4.2",
+    "fetch-cookie": "^3.2.0",
+    "ofetch": "^1.5.1",
+    "playwright-chromium": "^1.59.1",
+    "sanitize-html": "^2.17.2",
+    "smol-toml": "^1.6.1",
+    "undici": "^8.0.3"
   },
   "devDependencies": {
-    "@types/node": "^24.5.2",
-    "@types/sanitize-html": "^2.16.0"
+    "@types/node": "^25.6.0",
+    "@types/sanitize-html": "^2.16.1",
+    "vite-plus": "latest"
+  },
+  "prettier": {
+    "printWidth": 120,
+    "singleQuote": true
+  },
+  "packageManager": "pnpm@10.33.0",
+  "pnpm": {
+    "overrides": {
+      "vite": "npm:@voidzero-dev/vite-plus-core@latest",
+      "vitest": "npm:@voidzero-dev/vite-plus-test@latest"
+    },
+    "peerDependencyRules": {
+      "allowAny": [
+        "vite",
+        "vitest"
+      ],
+      "allowedVersions": {
+        "vite": "*",
+        "vitest": "*"
+      }
+    },
+    "onlyBuiltDependencies": [
+      "playwright-chromium"
+    ]
   }
 }

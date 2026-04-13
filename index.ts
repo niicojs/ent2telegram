@@ -9,9 +9,7 @@ import Ent from './ent.ts';
 
 const { values: options } = parseArgs({
   options: {
-    home: {
-      type: 'string',
-    },
+    home: { type: 'string' },
   },
 });
 
@@ -29,7 +27,7 @@ try {
       ...JSON.parse(readFileSync(historyFile, 'utf8')).map((h: any) => ({
         id: h.id,
         date: new Date(h.date),
-      }))
+      })),
     );
   }
 
@@ -37,46 +35,50 @@ try {
   const ent = Ent(config, history);
 
   console.log('Login...');
-  const info = await ent.login();
-  console.log('Logged in as ' + info.username);
+  try {
+    await ent.login();
 
-  console.log('Get inbox...');
-  const messages = await ent.inbox();
-  console.log(`  -> ${messages.length} messages to send`);
-  for (const msg of messages) {
-    try {
-      await telegram.sendMessage(msg);
-      history.push({ id: msg.id, date: msg.date });
-    } catch (e: any) {
-      console.log('Error');
-      const error = await e.response.json();
-      console.log(error || e.message);
-      console.log(e);
+    console.log('Get inbox...');
+    const messages = await ent.inbox();
+    console.log(`  -> ${messages.length} messages to send`);
+    for (const msg of messages) {
+      try {
+        await telegram.sendMessage(msg);
+        history.push({ id: msg.id, date: msg.date });
+      } catch (e: any) {
+        console.log('Error', e.message);
+        if (e.response) {
+          const error = await e.response.json();
+          console.log(error);
+        }
+        console.log(e);
+      }
     }
-  }
 
-  console.log('Get notifications...');
-  const notifs = await ent.notifications();
-  console.log(`  -> ${notifs.length} messages to send`);
-  for (const notif of notifs) {
-    try {
-      await telegram.sendMessage(notif);
-      history.push({ id: notif.id, date: notif.date });
-    } catch (e: any) {
-      console.log('Error');
-      const error = await e.response.json();
-      console.log(error || e.message);
-      console.log(e);
+    // console.log('Get notifications...');
+    // const notifs = await ent.notifications();
+    // console.log(`  -> ${notifs.length} messages to send`);
+    // for (const notif of notifs) {
+    //   try {
+    //     await telegram.sendMessage(notif);
+    //     history.push({ id: notif.id, date: notif.date });
+    //   } catch (e: any) {
+    //     console.log('Error');
+    //     const error = await e.response.json();
+    //     console.log(error || e.message);
+    //     console.log(e);
+    //   }
+    // }
+
+    console.log('Save history...');
+    let synchistory = history;
+    if (synchistory.length > 200) {
+      synchistory = synchistory.slice(synchistory.length - 200);
     }
+    writeFileSync(historyFile, JSON.stringify(synchistory, null, 2), 'utf8');
+  } finally {
+    await ent.cleanUp();
   }
-
-  console.log('Save history...');
-  let synchistory = history;
-  if (synchistory.length > 200) {
-    synchistory = synchistory.slice(synchistory.length - 200);
-  }
-  writeFileSync(historyFile, JSON.stringify(synchistory, null, 2), 'utf8');
-
   console.log('Done.');
 } finally {
   try {

@@ -1,8 +1,12 @@
+ent_url = "https://www.moncollege-ent.essonne.fr"
+school = "name of the school to select at login, e.g. CLG-JULES VERNE"
+child = "name of the child to select at login, e.g. Alexandre"
+
 [login]
-ent_url = "https://www.moncollege-ent.essonne.fr/timeline/timeline"
-user =  "ent login"
+ent_url = "https://www.moncollege-ent.essonne.fr/"
+user = "ent login"
 password = "ent password"
 
 [telegram]
-token="token to get from @fatherbot"
-chatId=1111 # id of user or group
+token = "token to get from @fatherbot"
+chatId = 1111 # id of user or group

@@ -25,5 +25,4 @@ export const wait = async (time: number) => {
   return new Promise((resolve) => setTimeout(resolve, time));
 };
 
-export const getWeekNumber = () =>
-  1 + differenceInWeeks(addDays(new Date(), 1), new Date(2025, 8, 1));
+export const getWeekNumber = () => 1 + differenceInWeeks(addDays(new Date(), 1), new Date(2025, 8, 1));

@@ -1,52 +1,73 @@
-import { ProxyAgent } from 'undici';
-import { createFetch } from 'ofetch';
-import makeFetchCookie from 'fetch-cookie';
 import sanitizeHtml from 'sanitize-html';
 import type { Config } from './config.ts';
 import type { Attach } from './telegram.ts';
+import { chromium, type Page } from 'playwright-chromium';
 
 const clean = (html: string) =>
   sanitizeHtml(html, {
     allowedTags: ['b', 'i', 'u', 's', 'a', 'div', 'p', 'br'],
   })
-    .replace(/(\<br ?\/?\>)|(\<div\>)|(\<p\>)/g, '\n')
-    .replace(/(\<\/div\>)|(\<\/p\>)/g, '')
+    .replace(/(<br ?\/?>)|(<div>)|(<p>)/g, '\n')
+    .replace(/(<\/div>)|(<\/p>)/g, '')
     .replace(/(\n)+/g, '\n');
 
 export default function Ent(config: Config, history: { id: string; date: Date }[]) {
-  const fetchWithCookies = makeFetchCookie(fetch);
-  const ofetch = createFetch({
-    fetch: fetchWithCookies,
-    Headers,
-    AbortController,
-  });
-
-  let client = ofetch.create({
-    baseURL: config.ent_url,
-  });
-  if (config.proxy) {
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-    client = client.create({
-      dispatcher: new ProxyAgent({
-        uri: config.proxy,
-      }),
-    });
-  }
-
+  let base_url = config.ent_url;
+  if (!base_url.endsWith('/')) base_url += '/';
+  let page: Page;
   let child = '';
+  let child_id = '';
+
+  const http_get_json = async (path: string) => {
+    const url = `${base_url}${path}`;
+    const cookies = await page.context().cookies(url);
+    const data = await page.request.get(url, {
+      headers: { Cookie: cookies.map((c) => `${c.name}=${c.value}`).join('; ') },
+    });
+    return await data.json();
+  };
+
+  const http_get_binary = async (path: string) => {
+    const url = `${base_url}${path}`;
+    const cookies = await page.context().cookies(url);
+    const data = await page.request.get(url, {
+      headers: { Cookie: cookies.map((c) => `${c.name}=${c.value}`).join('; ') },
+    });
+    return await data.body();
+  };
 
   const login = async () => {
-    await client('/');
-    await client('/auth/login', {
-      method: 'POST',
-      body: new URLSearchParams({
-        email: config.login.user,
-        password: config.login.password,
-      }),
-    });
-    const info = await client('/auth/oauth2/userinfo');
-    const childId = info.childrenIds.at(0);
-    child = info.children[childId].firstName;
+    const browser = await chromium.launch({ headless: true });
+    const context = await browser.newContext({ locale: 'fr-FR' });
+    page = await context.newPage();
+    await page.route('**/*.{png,jpg,jpeg}', (route) => route.abort());
+    await page.goto(`${base_url}auth/saml/authn/relative?callBack=${encodeURIComponent(base_url)}`);
+    await page.getByRole('textbox', { name: 'Identifiant *' }).click();
+    await page.getByRole('textbox', { name: 'Identifiant *' }).fill(config.login.user);
+    await page.getByRole('textbox', { name: 'Mot de passe *' }).click();
+    await page.getByRole('textbox', { name: 'Mot de passe *' }).fill(config.login.password);
+    await page.getByRole('button', { name: 'Se connecter' }).click();
+    await page.waitForLoadState('networkidle');
+    const rows = await page.locator('#credentials-content form div.row ').all();
+    for (const row of rows) {
+      const label = await row.locator('label').textContent();
+      if (label?.includes(config.school)) {
+        await row.locator('button').click();
+      }
+    }
+    await page.waitForLoadState('networkidle');
+    await page.getByRole('link', { name: 'Messagerie Messagerie' }).click();
+
+    const info = await http_get_json('auth/oauth2/userinfo');
+    for (const id in info.children) {
+      if (info.children[id].firstName === config.child) {
+        child_id = id;
+        child = info.children[id].firstName;
+      }
+    }
+
+    if (!child_id) throw new Error('Child not found in userinfo');
+
     return info;
   };
 
@@ -60,10 +81,9 @@ export default function Ent(config: Config, history: { id: string; date: Date }[
   };
 
   const inbox = async () => {
-    // get inbox
-    const data: any[] = await client('/conversation/list/inbox?page=0&unread=false');
+    const data = await http_get_json('conversation/list/inbox?page=0&unread=false');
 
-    let messages = data.map((m) => ({
+    let messages = data.map((m: any) => ({
       id: m.id as string,
       type: 'Message',
       child: child as string,
@@ -80,15 +100,15 @@ export default function Ent(config: Config, history: { id: string; date: Date }[
     // get details for unread
     if (messages.length > 0) {
       for (const msg of messages) {
-        const detail = await client(`/conversation/message/${msg.id}`);
+        const detail = await http_get_json(`conversation/api/messages/${msg.id}`);
         msg.html = clean(detail.body as string);
         msg.attachments = await Promise.all(
           detail.attachments.map(async (a: any) => ({
             id: a.id,
             name: a.filename,
             type: guessType(a),
-            data: await client(`/conversation/message/${msg.id}/attachment/${a.id}`),
-          }))
+            data: await http_get_binary(`conversation/message/${msg.id}/attachment/${a.id}`),
+          })),
         );
       }
     }
@@ -97,9 +117,9 @@ export default function Ent(config: Config, history: { id: string; date: Date }[
   };
 
   const notifications = async () => {
-    const data = await client(
-      '/timeline/lastNotifications?type=ARCHIVE&type=BLOG&type=CALENDAR&type=COLLABORATIVEEDITOR&type=COLLABORATIVEWALL&type=COMMUNITY&type=EXERCIZER&type=FORMULAIRE&type=FORUM&type=HOMEWORKS&type=MINDMAP&type=NEWS&type=PAGES&type=POLL&type=PRESENCES&type=RACK&type=RBS&type=SCHOOLBOOK&type=SCRAPBOOK&type=SHAREBIGFILES&type=SUPPORT&type=TIMELINE&type=TIMELINEGENERATOR&type=USERBOOK&type=USERBOOK_MOTTO&type=WIKI&type=WORKSPACE&page=0'
-    );
+    const path =
+      'timeline/lastNotifications?type=APPOINTMENTS&type=ARCHIVE&type=BLOG&type=CALENDAR&type=COLLABORATIVEEDITOR&type=COLLABORATIVEWALL&type=COMMUNITIES&type=COMMUNITY&type=EXERCIZER&type=FORMULAIRE&type=FORUM&type=HOMEWORKS&type=MAGNETO&type=MESSAGERIE&type=MINDMAP&type=NABOOK&type=PAGES&type=POLL&type=RACK&type=RBS&type=SCHOOLBOOK&type=SCRAPBOOK&type=SHAREBIGFILES&type=SUPPORT&type=TIMELINE&type=TIMELINEGENERATOR&type=USERBOOK&type=USERBOOK_MOOD&type=USERBOOK_MOTTO&type=WIKI&type=WORKSPACE&type=NEWS&page=0';
+    const data = await http_get_json(path);
 
     let notifs = (data.results as any[]).map((p) => ({
       id: p._id,
@@ -107,7 +127,7 @@ export default function Ent(config: Config, history: { id: string; date: Date }[
       child,
       date: new Date(p.date.$date),
       from: clean(p.params.username),
-      subject: clean(p.params.subject || p.params.resourceName),
+      subject: clean(p.params.subject || p.params.info || p.params.formName || p.params.resourceName),
       html: clean(p.message).replace(/(\r?\n)+/g, '\n'),
     }));
 
@@ -116,5 +136,10 @@ export default function Ent(config: Config, history: { id: string; date: Date }[
     return notifs;
   };
 
-  return { login, inbox, notifications };
+  const cleanUp = async () => {
+    await page.context().close();
+    await page.close();
+  };
+
+  return { login, inbox, notifications, cleanUp };
 }
