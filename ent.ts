@@ -137,8 +137,12 @@ export default function Ent(config: Config, history: { id: string; date: Date }[
   };
 
   const cleanUp = async () => {
-    await page.context().close();
-    await page.close();
+    try {
+      if (page) await page.close();
+      if (page?.context()) await page.context().close();
+    } catch (e) {
+      console.error('Error during cleanup:', e);
+    }
   };
 
   return { login, inbox, notifications, cleanUp };
