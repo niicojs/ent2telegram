@@ -20,19 +20,13 @@ export default function Ent(config: Config, history: { id: string; date: Date }[
 
   const http_get_json = async (path: string) => {
     const url = `${base_url}${path}`;
-    const cookies = await page.context().cookies(url);
-    const data = await page.request.get(url, {
-      headers: { Cookie: cookies.map((c) => `${c.name}=${c.value}`).join('; ') },
-    });
+    const data = await page.request.get(url);
     return await data.json();
   };
 
   const http_get_binary = async (path: string) => {
     const url = `${base_url}${path}`;
-    const cookies = await page.context().cookies(url);
-    const data = await page.request.get(url, {
-      headers: { Cookie: cookies.map((c) => `${c.name}=${c.value}`).join('; ') },
-    });
+    const data = await page.request.get(url);
     return await data.body();
   };
 
